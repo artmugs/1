@@ -374,8 +374,8 @@ function esc(t){return String(t).replace(/[&<>"']/g,function(c){return {'&':'&am
 function rich(t){return esc(t).replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>').replace(/\r?\n/g,'<br>');}
 function imgUrl(u){
   u=String(u||'').trim();
-  var m=u.match(/drive\.google\.com\/(?:file\/d\/|open\?id=|uc\?[^ ]*?id=)([\w-]+)/);
-  return m?('https://drive.google.com/thumbnail?id='+m[1]+'&sz=w1600'):u;
+  var m=u.match(/drive\.google\.com\/(?:file\/d\/|open\?id=|uc\?[^ ]*?id=|thumbnail\?id=)([\w-]+)/);
+  return m?('https://lh3.googleusercontent.com/d/'+m[1]):u;
 }
 function imgTag(u,alt,lazy){return '<img src="'+esc(imgUrl(u))+'" alt="'+esc(alt||'')+'" referrerpolicy="no-referrer"'+(lazy?' loading="lazy"':'')+'>';}
 
@@ -574,6 +574,23 @@ Promise.all(['설정','상품안내','슬라이드','신청양식','안내'].map
   try{ if(r[4].length)applyNotice(r[4]); }catch(e){console.warn('안내',e);}
   initTabs();
 });
+</script>
+<script>
+/* 아트머그 등 다른 페이지에 iframe으로 끼워 넣을 때 부모 창에 높이를 알려주는 코드 (단독으로 열어도 문제 없음) */
+(function(){
+  function getContentHeight(){
+    var maxBottom=0;
+    Array.prototype.forEach.call(document.body.children,function(c){var r=c.getBoundingClientRect(); if(r.bottom>maxBottom)maxBottom=r.bottom;});
+    return Math.ceil(maxBottom+window.pageYOffset);
+  }
+  function sendAll(){ try{ window.parent.postMessage({type:'iframeResize',height:getContentHeight()},'*'); }catch(e){} }
+  window.addEventListener('load',sendAll);
+  window.addEventListener('resize',sendAll);
+  document.addEventListener('DOMContentLoaded',sendAll);
+  if(window.ResizeObserver){ new ResizeObserver(sendAll).observe(document.body); }
+  setInterval(sendAll,700);
+  document.addEventListener('click',function(){setTimeout(sendAll,350);});
+})();
 </script>
 </body>
 
