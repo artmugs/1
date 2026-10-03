@@ -380,19 +380,24 @@ function imgUrl(u){
 function imgTag(u,alt,lazy){return '<img src="'+esc(imgUrl(u))+'" alt="'+esc(alt||'')+'" referrerpolicy="no-referrer"'+(lazy?' loading="lazy"':'')+'>';}
 
 /* ---------- 시트 읽기 (JSONP: 서버 없이도 file:// 에서 동작) ---------- */
-var _cb=0;
+var _cb=0, _pending={};
+/* 구글이 항상 google.visualization.Query.setResponse(...) 를 호출하므로, reqId 로 해당 요청을 찾아 전달 */
+window.google=window.google||{};
+google.visualization=google.visualization||{};
+google.visualization.Query=google.visualization.Query||{};
+google.visualization.Query.setResponse=function(r){ var f=_pending[r&&r.reqId]; if(f)f(r); };
 function loadTab(name){
   return new Promise(function(resolve){
-    var fn='__sheet_cb_'+(_cb++), done=false, sc=document.createElement('script');
-    function finish(v){ if(done)return; done=true; try{delete window[fn];}catch(e){window[fn]=undefined;} sc.remove(); resolve(v); }
-    window[fn]=function(r){
+    var id=String(_cb++), done=false, sc=document.createElement('script');
+    function finish(v){ if(done)return; done=true; delete _pending[id]; sc.remove(); resolve(v); }
+    _pending[id]=function(r){
       if(!r||r.status!=='ok'||!r.table){finish([]);return;}
       var rows=r.table.rows.map(function(row){return (row.c||[]).map(function(c){return c&&c.v!=null?String(c.v):'';});});
       rows=rows.filter(function(r){return r.some(function(x){return x.trim()!=='';});});
       finish(rows);
     };
     sc.onerror=function(){finish([]);};
-    sc.src='https://docs.google.com/spreadsheets/d/'+SHEET_ID+'/gviz/tq?tqx=out:json;responseHandler='+fn+'&headers=0&sheet='+encodeURIComponent(name)+'&_='+Date.now();
+    sc.src='https://docs.google.com/spreadsheets/d/'+SHEET_ID+'/gviz/tq?tqx=out:json;reqId:'+id+'&headers=0&sheet='+encodeURIComponent(name)+'&_='+Date.now();
     document.head.appendChild(sc);
     setTimeout(function(){finish([]);},8000);
   });
